@@ -17,7 +17,7 @@ for w in words:
 # print(sorted(b.items(), key = lambda kv : -kv[1]))
 
 import torch
-
+'''
 N = torch.zeros((27,27), dtype=torch.int32)
 
 chars = sorted(list(set(''.join(words))))
@@ -33,7 +33,6 @@ for w in words:
         ix2 = s_to_i[ch2]
         N[ix1, ix2] += 1
 
-'''
 import matplotlib.pyplot as plt
 
 plt.figure(figsize=(16,16))
@@ -78,14 +77,22 @@ for w in words:
         N[ix1, ix2] += 1
 
 g = torch.Generator().manual_seed(2147483647)
-
+P = N.float()
+'''
+# Showing broadcast rules in action
+print(P.sum(1,keepdim=True).shape, P.sum(1,keepdim=True))
+print(P.sum(1).shape, P.sum(1))
+'''
+# /= means in-place operation, rather than re-creating memory with P = P / ...
+P /= P.sum(1, keepdim=True)
 output = []
 ix = 0
 while True:
-    p = N[ix].float()
-    p = p / p.sum()
+    p = P[ix]
+    # p = N[ix].float()
+    # p = p / p.sum()
     ix = torch.multinomial(p, num_samples=1, replacement=True, generator=g).item()
-    output.append(i_to_s[ix])
+    output.append(itos[ix])
     if ix == 0:
         break
 print(output)
