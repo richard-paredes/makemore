@@ -1,12 +1,13 @@
 import torch
 import torch.nn.functional as F
+
 words = open('names.txt', 'r').read().splitlines()
 chars = sorted(list(set(''.join(words))))
 stoi = {s:i+1 for i,s in enumerate(chars)}
 stoi['.'] = 0
-itois = {i:s for s,i in stoi.items()}
+itos = {i:s for s,i in stoi.items()}
 
-'''
+
 # Training set consists of two sets of data:
 # xs = inputs
 # ys = labels
@@ -26,10 +27,9 @@ ys = torch.tensor(ys)
 
 # How are we going to feed in the examples into a neural network? We have indices.
 # One-hot encoding
-g = torch.Generator().manual_seed(2147483647)a
+g = torch.Generator().manual_seed(2147483647)
 W = torch.randn((27,27), generator=g, requires_grad=True)
 
-import torch.nn.functional as F
 # x_encoding
 xenc = F.one_hot(xs, num_classes=27).float() # cast as float, which can be fed to neural nets
 
@@ -38,8 +38,8 @@ logits = xenc @ W # log-counts, somewhat similar to probabilities in the scratch
 counts = logits.exp() # equivalent N, where a bigram frequency is counted
 prob = counts / counts.sum(1,keepdims=True)
 
-''''''''
-Step-by-step Explanation
+
+# Step-by-step Explanation
 nlls = torch.zeros(5)
 for i in range(5):
     # i-th bigram:
@@ -47,10 +47,11 @@ for i in range(5):
     y = ys[i].item() # label character index
     print('----')
     print(f'bigram example {i+1}: {itos[x]}{itos[y]} (indexes ({x},{y}))')
-    print('input to the neural net: {x}')
-    print('output probabilities from neural net:', probls[i])
+    print(f'input to the neural net: {x}')
+    
+    print('output probabilities from neural net:', prob[i])
     print('label (actual next char):', y)
-    p = probs[i,y]
+    p = prob[i,y]
     print('probability assigned by net to the correct char:', p.item())
     logp = torch.log(p)
     print('log likelihood:', logp.item())
@@ -60,16 +61,17 @@ for i in range(5):
 
 print('====')
 print('average negative log likelihood, i.e. loss =', nlls.mean().item())
-''''''''
+
 # more efficient way of doing forward pass in the above loop
-loss = probs[torch.arange(5), ys].log().mean()
+# loss = prob[torch.arange(5), ys].log().mean()
 
 # backward pass
 W.grad = None # set gradient to zero
-loss.backward()
+# loss.backward()
 
 # update net weights based on the background prop
 W.data += -0.1 * W.grad
+
 '''
 xs,ys = [],[]
 for w in words:
@@ -103,3 +105,4 @@ for k in range(10):
 
     #tune
     W.data += -0.1 * W.grad
+'''
