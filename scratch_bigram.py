@@ -78,6 +78,8 @@ for w in words:
 
 g = torch.Generator().manual_seed(2147483647)
 P = N.float()
+# Model smoothing is performed to account for scenarios with 0% probability (i.e. 'jq' bigram has probability of 0)
+P = (N+1).float()
 '''
 # Showing broadcast rules in action
 print(P.sum(1,keepdim=True).shape, P.sum(1,keepdim=True))
@@ -96,3 +98,40 @@ while True:
     if ix == 0:
         break
 print(output)
+
+# Examine probabilities
+# '''
+log_likelihood = 0.0
+n = 0
+for w in words[:3]:
+    chs = ['.'] + list(w) + ['.']
+    for ch1, ch2 in zip(chs, chs[1:]):
+        ix1 = stoi[ch1]
+        ix2 = stoi[ch2]
+        prob = P[ix1, ix2]
+        log_prob = torch.log(prob)
+        print(f'{ch1}{ch2}: {prob:.4f} or {log_prob:.4f}')
+        log_likelihood += log_prob # Likelihood would be prob1 * prob2 * prob3
+        n += 1
+        # However, we can simplify this using logs, since log(prob1*prob2*prob) = log(prob1) + log(prob2) + ...
+        # With 27 possible characters, then all probs would be about 4%.
+        # This means that any bigram with > 4% probably, the model identified
+        # statistically significant patterns
+print(f'{log_likelihood=}')
+
+negative_log_likelihood = -log_likelihood
+# Loss function since lowest it can get is 0, the higher it is, the worse off the predictions being made
+print(f'{negative_log_likelihood=}')
+# normalized by dividing by counts
+print(f'{negative_log_likelihood/n}')
+
+
+# '''
+
+# Job of training is to find parameters that will minimize negative_log_likelihood
+'''
+GOAL: Maximize likelihood of the data with respect ot model params (statistical modeling)
+- Equivalent to maximizing log Likelihood
+- Equiv. to minimizing log likelihood
+- Equiv to minimizing average negative log likelihood
+'''
