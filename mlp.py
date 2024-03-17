@@ -2,8 +2,6 @@ import torch
 import torch.nn.functional as F
 
 words = open('names.txt', 'r').read().splitlines()
-print(words[:8])
-len(words)
 
 chars = sorted(list(set(''.join(words))))
 stoi = {s:i+1 for i,s in enumerate(chars)}
@@ -36,24 +34,26 @@ Xtr, Ytr = build_dataset(words[:n1])
 Xdev, Ydev = build_dataset(words[n1:n2])
 Xte, Yte = build_dataset(words[n2:])
 
-EMBEDDING_NDIM = 10
-NUM_HIDDENLAYER = 200
+EMBEDDING_NDIM = 30
+NUM_HIDDENLAYER = 75
+BATCH_SIZE = 85
+LEARNING_RATE = 0.1
+DECAYED_LEARNING_RATE = 0.01
 g = torch.Generator().manual_seed(2147483647)
 C = torch.randn((27,EMBEDDING_NDIM), generator=g) # -> (27,10), after increasing embeddings
 W1 = torch.randn((EMBEDDING_NDIM*BLOCK_SIZE,NUM_HIDDENLAYER), generator=g) # -> (6,300)
 b1 = torch.randn(NUM_HIDDENLAYER, generator=g) # (300)
 W2 = torch.randn((NUM_HIDDENLAYER,27), generator=g) # (300,27)
 b2 = torch.randn(27, generator=g)
-LEARNING_RATE = 0.1
 parameters = [C, W1, b1, W2, b2]
 print(f'Num parameters: {sum(p.nelement() for p in parameters)}')
 
 for p in parameters:
     p.requires_grad = True
 for i in range(30000):
-
+    lr = LEARNING_RATE if i < 25000 else DECAYED_LEARNING_RATE
     # mini batch construct
-    ix = torch.randint(0, Xtr.shape[0], (32,))
+    ix = torch.randint(0, Xtr.shape[0], (BATCH_SIZE,))
 
     emb = C[Xtr[ix]] # only get (32,3,2)
     h = torch.tanh(emb.view(-1,EMBEDDING_NDIM*BLOCK_SIZE) @ W1 + b1)
@@ -73,14 +73,15 @@ for i in range(30000):
         p.grad = None
     loss.backward()
     for p in parameters:
-        p.data += -LEARNING_RATE * p.grad
+        p.data += -lr * p.grad
     # print(loss.item())
-print(loss.item())
+print(f'Training loss: {loss.item()}')
+
 emb = C[Xdev]
 h = torch.tanh(emb.view(-1,EMBEDDING_NDIM*BLOCK_SIZE) @ W1 + b1)
 logits = h @ W2 + b2
 loss = F.cross_entropy(logits, Ydev)
-print(loss.item())
+print(f'Testing loss: {loss.item()}')
 
 # the dev loss and training loss are within teh same ballpark
 # which indicates undefitting, caused by a small neural net
